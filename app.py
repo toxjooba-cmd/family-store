@@ -188,7 +188,7 @@ elif page == "سلة المشتريات":
                             "product_id": int(pid),
                             "product_name": row.get("name", "منتج"),
                             "quantity": qty,
-                            "price_iqd": price
+                            "price": price,
                         })
 
                     order_data = {
