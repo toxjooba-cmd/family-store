@@ -111,18 +111,32 @@ if page == "المتجر":
                 stock = int(product.get("stock") or 0)
                 st.write(f"**السعر: {price:,} دينار**")
                 st.caption(f"المتوفر: {stock}")
-                if stock > 0:
-                    if st.button("أضف إلى السلة", key=f"add_{product['id']}", use_container_width=True):
-                        pid = str(product["id"])
-                        current = st.session_state.cart.get(pid, {"product": product, "quantity": 0})
-                        if current["quantity"] < stock:
-                            current["quantity"] += 1
-                            st.session_state.cart[pid] = current
-                            st.success("تمت الإضافة إلى السلة")
-                        else:
-                            st.warning("لا توجد كمية إضافية متاحة")
-                else:
-                    st.warning("غير متوفر حالياً")
+                
+if stock > 0:
+    qty = st.number_input(
+        "اختر الكمية",
+        min_value=1,
+        max_value=stock,
+        value=1,
+        step=1,
+        key=f"qty_{product['id']}"
+    )
+
+    if st.button("أضف إلى السلة", key=f"add_{product['id']}", use_container_width=True):
+        pid = str(product["id"])
+        current = st.session_state.cart.get(
+            pid, {"product": product, "quantity": 0}
+        )
+
+        if current["quantity"] + qty <= stock:
+            current["quantity"] += qty
+            st.session_state.cart[pid] = current
+            st.success("تمت الإضافة إلى السلة")
+        else:
+            st.warning("الكمية المطلوبة تتجاوز المخزون")
+else:
+    st.warning("غير متوفر حالياً")
+
                 st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------- CART AND CHECKOUT ----------
