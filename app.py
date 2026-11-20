@@ -269,14 +269,26 @@ elif page == "الإدارة":
             st.markdown("### إضافة منتج جديد")
             with st.form("add_product", clear_on_submit=True):
                 name = st.text_input("اسم المنتج")
-                category = st.text_input("القسم")
+                
+categories = [
+    "الخضروات",
+    "اللحوم الطازجة",
+    "العصائر والمشروبات الغازية",
+    "السكائر والأراكيل"
+]
+
+category = st.selectbox(
+    "اختر قسم المنتج",
+    categories
+)
+
                 description = st.text_area("الوصف")
                 price = st.number_input("السعر بالدينار", min_value=0, step=250)
                 stock = st.number_input("الكمية المتوفرة", min_value=0, step=1)
                 image_url = st.text_input("رابط صورة المنتج (اختياري)")
                 add = st.form_submit_button("حفظ المنتج", use_container_width=True)
             if add:
-                if not name.strip() or not category.strip():
+                if not name.strip():
                     st.error("اسم المنتج والقسم مطلوبان.")
                 else:
                     try:
