@@ -267,34 +267,33 @@ elif page == "الإدارة":
 
         with admin_tab[0]:
             st.markdown("### إضافة منتج جديد")
+
             with st.form("add_product", clear_on_submit=True):
                 name = st.text_input("اسم المنتج")
-                
-categories = [
-    "الخضروات",
-    "اللحوم الطازجة",
-    "العصائر والمشروبات الغازية",
-    "السكائر والأراكيل"
-]
 
-category = st.selectbox(
-    "اختر قسم المنتج",
-    categories
-)
+                categories = [
+                    "الخضروات",
+                    "اللحوم الطازجة",
+                    "العصائر والمشروبات الغازية",
+                    "السكائر والأراكيل"
+                ]
 
+                category = st.selectbox("اختر قسم المنتج", categories)
                 description = st.text_area("الوصف")
                 price = st.number_input("السعر بالدينار", min_value=0, step=250)
                 stock = st.number_input("الكمية المتوفرة", min_value=0, step=1)
                 image_url = st.text_input("رابط صورة المنتج (اختياري)")
+
                 add = st.form_submit_button("حفظ المنتج", use_container_width=True)
+
             if add:
                 if not name.strip():
-                    st.error("اسم المنتج والقسم مطلوبان.")
+                    st.error("اسم المنتج مطلوب.")
                 else:
                     try:
                         db.table("products").insert({
                             "name": name.strip(),
-                            "category": category.strip(),
+                            "category": category,
                             "description": description.strip(),
                             "price_iqd": int(price),
                             "price": int(price),
@@ -302,12 +301,14 @@ category = st.selectbox(
                             "image_url": image_url.strip(),
                             "is_active": True
                         }).execute()
+
                         load_products.clear()
                         st.success("تمت إضافة المنتج إلى المتجر.")
-                    except Exception as e:
-                        st.error("تعذرت إضافة المنتج. تحقق من صلاحيات قاعدة البيانات.")
-                        st.caption(str(e))
 
+                    except Exception as e:
+                        st.error("تعذرت إضافة المنتج.")
+                        st.caption(str(e))
+                        
         with admin_tab[1]:
             st.markdown("### تعديل أو إخفاء منتج")
             try:
