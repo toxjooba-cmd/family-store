@@ -3,7 +3,7 @@ from supabase import create_client, Client
 from datetime import datetime
 
 st.set_page_config(
-    page_title="Family Store",
+    page_title="cool market",
     page_icon="🛒",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -30,7 +30,7 @@ div.stButton > button:hover, div.stFormSubmitButton > button:hover {
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🛒 Family Store")
+st.title("🛒 cool market")
 st.caption("كل احتياجات البيت والعائلة في مكان واحد")
 
 # ---------- CONNECTION ----------
