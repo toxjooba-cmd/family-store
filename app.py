@@ -57,7 +57,52 @@ try:
 except Exception:
     st.error("تعذر الاتصال بقاعدة البيانات. تحقق من SUPABASE_URL وSUPABASE_KEY داخل Streamlit → Settings → Secrets.")
     st.stop()
+# ---------- COOL MARKET SETTINGS ----------
+DEFAULT_SETTINGS = {
+    "store_name": "Cool Market",
+    "tagline": "كل احتياجاتك في مكان واحد",
+    "primary_color": "#1769AA",
+    "background_color": "#F4F7FB",
+    "text_color": "#172033",
+    "card_radius": 16,
+    "columns": 2,
+    "banner_title": "أهلاً بك في Cool Market",
+    "banner_subtitle": "تسوق بسهولة واستمتع بتجربة مميزة",
+    "banner_image": ""
+}
 
+def load_store_settings():
+    try:
+        result = (
+            db.table("store_settings")
+            .select("config")
+            .eq("id", "main")
+            .execute()
+        )
+        if result.data:
+            return {**DEFAULT_SETTINGS, **(result.data[0].get("config") or {})}
+    except Exception:
+        pass
+    return DEFAULT_SETTINGS.copy()
+
+store_settings = load_store_settings()
+
+st.markdown(f"""
+<style>
+.stApp {{
+    background: {store_settings['background_color']};
+    color: {store_settings['text_color']};
+}}
+div.stButton > button {{
+    background: {store_settings['primary_color']};
+    color: white;
+    border-radius: {store_settings['card_radius']}px;
+}}
+.product-card {{
+    border-radius: {store_settings['card_radius']}px;
+}}
+</style>
+""", unsafe_allow_html=True)
 if "cart" not in st.session_state:
     st.session_state.cart = {}
 if "admin_ok" not in st.session_state:
@@ -263,7 +308,12 @@ elif page == "الإدارة":
             st.session_state.admin_ok = False
             st.rerun()
 
-        admin_tab = st.tabs(["إضافة منتج", "إدارة المنتجات", "الطلبات"])
+        admin_tab = st.tabs([
+    "إضافة منتج",
+    "إدارة المنتجات",
+    "الطلبات",
+    "إدارة الأقسام"
+])
 
         with admin_tab[0]:
             st.markdown("### إضافة منتج جديد")
@@ -386,5 +436,156 @@ elif page == "الإدارة":
                         st.success("تم تحديث حالة الطلب.")
                         st.rerun()
 
+        with admin_tab[3]:
+            st.markdown("### إدارة أقسام Cool Market")
+
+            try:
+                categories = (
+                    db.table("store_categories")
+                    .select("*")
+                    .eq("store_id", "cool_market")
+                    .order("sort_order")
+                    .execute()
+                    .data or []
+                )
+            except Exception as e:
+                categories = []
+                st.error("تعذر تحميل الأقسام.")
+                st.caption(str(e))
+
+            st.markdown("#### إضافة قسم جديد")
+
+            new_name = st.text_input(
+                "اسم القسم الجديد",
+                key="new_category_name"
+            )
+            new_image = st.file_uploader(
+                "صورة القسم",
+                type=["png", "jpg", "jpeg", "webp"],
+                key="new_category_image"
+            )
+
+            if st.button("إضافة القسم", key="add_category"):
+                if not new_name.strip():
+                    st.warning("اكتب اسم القسم أولاً.")
+                else:
+                    try:
+                        image_path = ""
+
+                        if new_image:
+                            extension = new_image.name.split(".")[-1].lower()
+                            image_path = (
+                                f"cool_market/{datetime.now().strftime('%Y%m%d%H%M%S%f')}.{extension}"
+                            )
+
+                            db.storage.from_("category-images").upload(
+                                image_path,
+                                new_image.getvalue(),
+                                file_options={
+                                    "content-type": new_image.type,
+                                    "upsert": "true"
+                                }
+                            )
+
+                        db.table("store_categories").insert({
+                            "store_id": "cool_market",
+                            "name": new_name.strip(),
+                            "image_url": image_path,
+                            "is_active": True,
+                            "sort_order": len(categories) + 1
+                        }).execute()
+
+                        st.success("تمت إضافة القسم بنجاح.")
+                        st.rerun()
+
+                    except Exception as e:
+                        st.error("تعذرت إضافة القسم.")
+                        st.caption(str(e))
+
+            st.divider()
+            st.markdown("#### الأقسام الحالية")
+
+            for category in categories:
+                with st.expander(category["name"]):
+                    st.write(
+                        "الحالة: " +
+                        ("مفتوح" if category["is_active"] else "مخفي")
+                    )
+
+                    edit_name = st.text_input(
+                        "اسم القسم",
+                        value=category["name"],
+                        key=f"cat_name_{category['id']}"
+                    )
+
+                    edit_image = st.file_uploader(
+                        "تغيير صورة القسم",
+                        type=["png", "jpg", "jpeg", "webp"],
+                        key=f"cat_image_{category['id']}"
+                    )
+
+                    edit_order = st.number_input(
+                        "ترتيب القسم",
+                        min_value=1,
+                        value=max(1, int(category["sort_order"] or 1)),
+                        key=f"cat_order_{category['id']}"
+                    )
+
+                    if st.button(
+                        "حفظ التعديلات",
+                        key=f"save_cat_{category['id']}"
+                    ):
+                        try:
+                            updates = {
+                                "name": edit_name.strip(),
+                                "sort_order": int(edit_order)
+                            }
+
+                            if edit_image:
+                                extension = edit_image.name.split(".")[-1].lower()
+                                image_path = (
+                                    f"cool_market/{datetime.now().strftime('%Y%m%d%H%M%S%f')}.{extension}"
+                                )
+
+                                db.storage.from_("category-images").upload(
+                                    image_path,
+                                    edit_image.getvalue(),
+                                    file_options={
+                                        "content-type": edit_image.type,
+                                        "upsert": "true"
+                                    }
+                                )
+                                updates["image_url"] = image_path
+
+                            db.table("store_categories").update(
+                                updates
+                            ).eq("id", category["id"]).execute()
+
+                            st.success("تم حفظ التعديلات.")
+                            st.rerun()
+
+                        except Exception as e:
+                            st.error("تعذر حفظ التعديلات.")
+                            st.caption(str(e))
+
+                    if st.button(
+                        "فتح القسم" if not category["is_active"] else "إخفاء القسم",
+                        key=f"toggle_cat_{category['id']}"
+                    ):
+                        db.table("store_categories").update({
+                            "is_active": not category["is_active"]
+                        }).eq("id", category["id"]).execute()
+                        st.rerun()
+
+                    if st.button(
+                        "حذف القسم",
+                        key=f"delete_cat_{category['id']}"
+                    ):
+                        db.table("store_categories").delete().eq(
+                            "id", category["id"]
+                        ).execute()
+                        st.success("تم حذف القسم. المنتجات القديمة لم تُحذف.")
+                        st.rerun()
+                        
 st.divider()
 st.caption("Family Store © 2026")
